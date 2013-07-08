@@ -1,0 +1,79 @@
+<html>
+<head>
+	<style>
+		body {
+			padding: 0px;
+			margin: 0px;
+		}
+	</style>
+</head>
+<body>
+	<canvas id="myCanvas"></canvas>
+	<script src="Keyboard.js"></script>
+	<script>
+
+		var canvas = document.getElementById('myCanvas');
+		var ctx = canvas.getContext('2d');
+		var keyboard = new KeyboardJS (true);
+
+		window.onresize = function () {
+			console.log('window resize');
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		}
+		window.onresize();
+		
+		var alpacaIMG = new Image();
+		alpacaIMG.src = 'alpaca.png';
+
+		var herbIMG = new Image();
+		herbIMG.src = 'herb.png';
+
+		function Alpaca (keys) {
+			this.x = Math.random()*canvas.width;
+			this.y = Math.random()*canvas.height;
+			this.speed = 5;
+			this.radius = 10;
+			this.keys = keys;
+		}
+
+		Alpaca.prototype.logic = function () {
+			if (keyboard.keysCHAR[this.keys.up]) this.y -= this.speed;
+			if (keyboard.keysCHAR[this.keys.down]) this.y += this.speed;
+			if (keyboard.keysCHAR[this.keys.left]) this.x -= this.speed;
+			if (keyboard.keysCHAR[this.keys.right]) this.x += this.speed;
+		}
+
+		Alpaca.prototype.render = function () {
+			ctx.drawImage(alpacaIMG, this.x-alpacaIMG.width/2, this.y-alpacaIMG.height/2);
+		}
+
+		var player = new Alpaca ({up:'W', down:'S', left:'A', right:'D'});
+
+		function mainLoop () {
+
+			requestAnimFrame(mainLoop);
+			ctx.clearRect(0,0,canvas.width,canvas.height);
+			ctx.fillStyle = '#C0D890';
+			ctx.fillRect(0,0,canvas.width,canvas.height);
+
+			player.logic();
+			player.render();
+
+		}
+
+		window.requestAnimFrame = (function(){
+		  return  window.requestAnimationFrame       ||
+		          window.webkitRequestAnimationFrame ||
+		          window.mozRequestAnimationFrame    ||
+		          function( callback ){
+		            window.setTimeout(callback, 1000 / 60);
+		          };
+		})();
+
+		requestAnimFrame(mainLoop);
+
+	</script>
+
+</body>
+</head>
