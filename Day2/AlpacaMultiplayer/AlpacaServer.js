@@ -42,10 +42,10 @@ function Player (socket) {
 	this.vx = this.vy = 0;
 	this.socket = socket;
 	this.color = '#'+Math.floor(Math.random()*16777215).toString(16);
+	this.score = 0;
 }
 Player.prototype.radius = 15;
 Player.prototype.speed = 5;
-Player.prototype.score = 0;
 Player.prototype.logic = function () {
 	this.x += this.vx*delta/16;
 	this.y += this.vy*delta/16;
@@ -63,6 +63,7 @@ Player.prototype.collectCoins = function () {
 		if (objectHitTest(this, obj)) {
 			coins.splice(i, 1);
 			this.score += obj.points;
+			console.log(this.socket.id + ' now has ' + this.score + ' points.');
 			needsGameStateUpdate = true;
 		}
 	}
@@ -75,6 +76,7 @@ Player.prototype.generatePacket = function () {
 	packet.vy = this.vy;
 	packet.color = this.color;
 	packet.id = this.socket.id;
+	packet.score = this.score;
 	return packet;
 };
 Player.prototype.disconnect = function () {
@@ -85,7 +87,7 @@ Player.prototype.disconnect = function () {
 function Coin () {
 	this.x = Math.floor(Math.random()*MAP_WIDTH);
 	this.y = Math.floor(Math.random()*MAP_HEIGHT);
-	this.point = 5 + Math.floor(Math.random()*5)*5;
+	this.points = 5 + Math.floor(Math.random()*5)*5;
 }
 Coin.prototype.radius = 15;
 
@@ -112,7 +114,7 @@ function mainLoop () {
 	oldDate = currentDate;
 
 	needsGameStateUpdate = false;
-	
+
 	for (var playerID in players) {
 		if (players[playerID].socket.disconnected) players[playerID].disconnect();
 		else players[playerID].logic();
