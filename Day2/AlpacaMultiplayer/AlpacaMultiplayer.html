@@ -134,6 +134,16 @@
 			for (var i = 0; i < coins.length; ++i) coins[i].render();
 			for (var playerID in players) players[playerID].render();
 
+			ctx.fillStyle = 'white';
+			ctx.fillRect(0,0,200,100);
+			var count = 0;
+			for (var playerID in players) {
+				var p = players[playerID];
+				ctx.fillStyle = p.color;
+				ctx.fillText(p.id + ' has '+p.score, 10, 20 +20*count);
+				++count;
+			}
+
 		}
 
 		window.requestAnimFrame = (function(){
@@ -172,7 +182,7 @@
 			}
 
 			coins = [];
-			
+
 			for (var i = 0; i < gameState.coins.length; ++i) {
 				var cdata = gameState.coins[i];
 				var c = new Coin ();
