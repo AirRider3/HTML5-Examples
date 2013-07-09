@@ -112,6 +112,7 @@ function mainLoop () {
 	oldDate = currentDate;
 
 	needsGameStateUpdate = false;
+	
 	for (var playerID in players) {
 		if (players[playerID].socket.disconnected) players[playerID].disconnect();
 		else players[playerID].logic();

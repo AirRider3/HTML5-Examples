@@ -156,6 +156,8 @@
 
 			console.log('gameState message');
 
+			players = {};
+
 			for (var playerID in gameState.players) {
 
 				var pdata = gameState.players[playerID];
@@ -170,6 +172,7 @@
 			}
 
 			coins = [];
+			
 			for (var i = 0; i < gameState.coins.length; ++i) {
 				var cdata = gameState.coins[i];
 				var c = new Coin ();
