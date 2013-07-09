@@ -8,19 +8,25 @@ io.sockets.on('connection', function (socket) {
 
 	console.log('A socket with ID '+socket.id+'has connected to the server!');
 	players[socket.id] = new Player (socket);
-	sendGameState(socket);
+
+	socket.emit('logged', socket.id);
+
+	var sockets = [];
+	for (var playerID in players) sockets.push(players[playerID].socket);
+	sendGameState(sockets);
 
 	socket.on('changeDirection', function (newDir) { //x,y,vx,vy
-		socket.emit('logged', "Welcome to the server!");
 		var p = players[socket.id];
 		p.x = newDir.x;
 		p.y = newDir.y;
 		p.vx = newDir.vx;
 		p.vy = newDir.vy;
 
+		newDir.playerID = socket.id;
+
 		for (var playerID in players) {
 			if (socket.id != playerID) {
-				players[playerID].emit('playerChangedDirection', newDir);
+				players[playerID].socket.emit('playerChangedDirection', newDir);
 			}
 		}
 
@@ -35,6 +41,7 @@ function Player (socket) {
 	this.y = Math.floor(Math.random()*MAP_HEIGHT);
 	this.vx = this.vy = 0;
 	this.socket = socket;
+	this.color = '#'+Math.floor(Math.random()*16777215).toString(16);
 }
 Player.prototype.radius = 15;
 Player.prototype.speed = 5;
@@ -54,7 +61,7 @@ Player.prototype.collectCoins = function () {
 	for (var i = coins.length-1; i >= 0; --i) {
 		var obj = coins[i];
 		if (objectHitTest(this, obj)) {
-			displayObjects.splice(i, 1);
+			coins.splice(i, 1);
 			this.score += obj.points;
 			needsGameStateUpdate = true;
 		}
@@ -66,6 +73,8 @@ Player.prototype.generatePacket = function () {
 	packet.y = this.y;
 	packet.vx = this.vx;
 	packet.vy = this.vy;
+	packet.color = this.color;
+	packet.id = this.socket.id;
 	return packet;
 };
 Player.prototype.disconnect = function () {
@@ -73,12 +82,14 @@ Player.prototype.disconnect = function () {
 	needsGameStateUpdate = true;
 }
 
-function sendGameState (socket) {
+function sendGameState (sockets) {
 	var playersPacket = {};
 	for (var playerID in players) {
 		playersPacket[playerID] = players[playerID].generatePacket();
 	}
-	socket.emit('gameState', {players:playersPacket, coins:coins});
+	for (var i = 0; i < sockets.length; ++i) {
+		sockets[i].emit('gameState', {players:playersPacket, coins:coins});
+	}
 }
 
 var needsGameStateUpdate = false;
@@ -89,10 +100,13 @@ function mainLoop () {
 		if (players[playerID].socket.disconnected) players[playerID].disconnect();
 		else players[playerID].logic();
 	}
+	
 	if (needsGameStateUpdate) {
+		var sockets = [];
 		for (var playerID in players) {
-			sendGameState(players[playerID].socket);
+			sockets.push(players[playerID].socket);
 		}
+		sendGameState(sockets);
 	}
 }
 
