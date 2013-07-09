@@ -134,8 +134,10 @@
 			for (var i = 0; i < coins.length; ++i) coins[i].render();
 			for (var playerID in players) players[playerID].render();
 
+			ctx.globalAlpha = 0.75;
 			ctx.fillStyle = 'white';
 			ctx.fillRect(0,0,200,100);
+			ctx.globalAlpha = 1;
 			var count = 0;
 			for (var playerID in players) {
 				var p = players[playerID];

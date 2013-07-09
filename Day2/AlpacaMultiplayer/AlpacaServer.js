@@ -65,6 +65,7 @@ Player.prototype.collectCoins = function () {
 			this.score += obj.points;
 			console.log(this.socket.id + ' now has ' + this.score + ' points.');
 			needsGameStateUpdate = true;
+			if (coins.length == 0) generateCoins();
 		}
 	}
 }
@@ -129,6 +130,8 @@ function mainLoop () {
 	}
 }
 
-for (var i = 0 ; i < Math.floor(Math.random()*30)+10; ++i) coins.push(new Coin());
-
+function generateCoins () {
+	for (var i = 0 ; i < Math.floor(Math.random()*30)+10; ++i) coins.push(new Coin());
+}
+generateCoins();
 setInterval(mainLoop, 1000/60);
