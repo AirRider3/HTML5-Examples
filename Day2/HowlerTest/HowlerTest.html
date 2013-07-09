@@ -1,0 +1,20 @@
+<html>
+<head>
+</head>
+<body>
+	<script src="howler.min.js"></script>
+	<script>
+
+		var sound = new Howl({
+		  urls: ['bgmusic.wav','bgmusic.ogg'],
+		  autoplay: true,
+		  loop: true,
+		  volume: 0.75,
+		  onend: function() {
+		    console.log('Finished!');
+		  }
+		});
+
+	</script>
+</body>
+</head>
