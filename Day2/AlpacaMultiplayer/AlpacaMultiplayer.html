@@ -29,9 +29,6 @@
 		window.onresize();
 		
 		var alpacaIMG = new Image();
-		alpacaIMG.onload = function () {
-			alpacaIMG = dyeImageWithColor(alpacaIMG, '#'+ Math.floor(Math.random()*16777215).toString(16), 0.5);
-		}
 		alpacaIMG.src = 'alpaca.png';
 
 		var herbIMG = new Image();
@@ -70,8 +67,8 @@
 
 			}
 
-			this.x += this.vx;
-			this.y += this.vy;
+			this.x += this.vx*delta/16;
+			this.y += this.vy*delta/16;
 
 			//this.collectCoins();
 
@@ -90,7 +87,10 @@
 		}
 		*/
 		Alpaca.prototype.render = function () {
-			ctx.drawImage(alpacaIMG, this.x-alpacaIMG.width/2, this.y-alpacaIMG.height/2 - 30);
+			ctx.drawImage(this.sprite, this.x-alpacaIMG.width/2, this.y-alpacaIMG.height/2 - 30);
+		}
+		Alpaca.prototype.generateSprite = function () {
+			this.sprite = dyeImageWithColor(alpacaIMG, this.color, 0.5);
 		}
 
 		function Coin () {
@@ -108,7 +108,14 @@
 		}
 		*/
 
+		var oldDate = +new Date();
+		var delta = 0;
+
 		function mainLoop () {
+
+			var currentDate = +new Date();
+			delta = currentDate - oldDate;
+			oldDate = currentDate;
 
 			requestAnimFrame(mainLoop);
 			ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -155,6 +162,8 @@
 				var p = new Alpaca ();
 				
 				for (var prop in pdata) p[prop] = pdata[prop];
+
+				p.generateSprite();
 
 				players[p.id] = p;
 

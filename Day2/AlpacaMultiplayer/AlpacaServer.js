@@ -33,8 +33,8 @@ io.sockets.on('connection', function (socket) {
 	});
 });
 
-var MAP_WIDTH =	800;
-var MAP_HEIGHT = 600;
+var MAP_WIDTH =	400;
+var MAP_HEIGHT = 400;
 
 function Player (socket) {
 	this.x = Math.floor(Math.random()*MAP_WIDTH);
@@ -47,8 +47,8 @@ Player.prototype.radius = 15;
 Player.prototype.speed = 5;
 Player.prototype.score = 0;
 Player.prototype.logic = function () {
-	this.x += this.vx;
-	this.y += this.vy;
+	this.x += this.vx*delta/16;
+	this.y += this.vy*delta/16;
 	this.collectCoins();
 }
 
@@ -82,6 +82,14 @@ Player.prototype.disconnect = function () {
 	needsGameStateUpdate = true;
 }
 
+function Coin () {
+	this.x = Math.floor(Math.random()*MAP_WIDTH);
+	this.y = Math.floor(Math.random()*MAP_HEIGHT);
+	this.point = 5 + Math.floor(Math.random()*5)*5;
+}
+Coin.prototype.radius = 15;
+
+
 function sendGameState (sockets) {
 	var playersPacket = {};
 	for (var playerID in players) {
@@ -94,7 +102,15 @@ function sendGameState (sockets) {
 
 var needsGameStateUpdate = false;
 
+var oldDate = +new Date();
+var delta = 0;
+
 function mainLoop () {
+
+	var currentDate = +new Date();
+	delta = currentDate - oldDate;
+	oldDate = currentDate;
+
 	needsGameStateUpdate = false;
 	for (var playerID in players) {
 		if (players[playerID].socket.disconnected) players[playerID].disconnect();
@@ -109,5 +125,7 @@ function mainLoop () {
 		sendGameState(sockets);
 	}
 }
+
+for (var i = 0 ; i < Math.floor(Math.random()*30)+10; ++i) coins.push(new Coin());
 
 setInterval(mainLoop, 1000/60);
