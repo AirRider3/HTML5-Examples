@@ -11,6 +11,7 @@
 	<canvas id="myCanvas"></canvas>
 	<script src="Keyboard.js"></script>
 	<script src="CanvasDye.min.js"></script>
+	<script src="socket.io.min.js"></script>
 	<script>
 
 		var canvas = document.getElementById('myCanvas');
@@ -113,6 +114,8 @@
 		})();
 
 		requestAnimFrame(mainLoop);
+
+		var socket = io.connect('http://localhost:8000');
 
 	</script>
 
