@@ -1,0 +1,146 @@
+<html>
+<head>
+	<title>Example</title>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+	<script>window.jQuery || document.write('<script src="js/jquery-1.9.1.min.js"><\/script>');</script>
+	<script src="js/pixi.js"></script>
+	<script src="js/Keyboard.js"></script>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			background-color: #fafafa;
+		}
+	</style>
+</head>
+<body>
+	<script>
+
+	var keyboard = new KeyboardJS(false);
+
+	function CarSpawner () {
+		this.i = 0;
+		this.j = 0;
+		this.dir = 1; //1 (right) or -1 (left).
+		this.speed = 1; //The quantity of tiles per second the cars move.
+		this.prob = 0.3; //Likelyhood to spawn vehicle
+	}
+
+	CarSpawner.prototype.spawns = function () {
+		return (Math.random() < this.prob);
+	}
+
+	function BackgroundTileProperties (prop) {
+		this.img = prop.img;
+		this.fatal = prop.fatal || false;
+		this.walkable = prop.walkable || true;
+	}
+
+	var BackgroundTiles = [];
+	BackgroundTiles.push( new BackgroundTileProperties({img:'grass.png'}) );
+	BackgroundTiles.push( new BackgroundTileProperties({img:'water.png', fatal:true}) );
+	BackgroundTiles.push( new BackgroundTileProperties({img:'road.png'}) );
+	BackgroundTiles.push( new BackgroundTileProperties({img:'grass.png'}, walkable : false) );
+
+	//El mapa tendría que estar rodeado por tiles non-walkable
+	var backgroundMap = [	3,3,3,3,3,3,3,3,3,3,
+							0,1,0,1,0,0,1,0,1,0,
+							1,1,1,1,1,1,1,1,1,1,
+							1,1,1,1,1,1,1,1,1,1,
+							1,1,1,1,1,1,1,1,1,1,
+							1,1,1,1,1,1,1,1,1,1,
+							2,2,2,2,2,2,2,2,2,2,
+							2,2,2,2,2,2,2,2,2,2,
+							2,2,2,2,2,2,2,2,2,2,
+							0,0,0,0,0,0,0,0,0,0];
+
+	$(window).resize(resize);
+	window.onorientationchange = resize;
+
+   	var w = 920;
+   	var h = 640;
+   	var slideX = w/2;
+   	var slideY = h/2;
+
+	// create an array of assets to load
+	var assetsToLoader = [ "textures.json"];
+
+	// create a new loader
+	loader = new PIXI.AssetLoader(assetsToLoader);
+
+	// use callback
+	loader.onComplete = onAssetsLoaded;
+
+	//begin load
+	loader.load();
+
+	// create an new instance of a pixi stage
+    var stage = new PIXI.Stage(0xffffff);
+ 
+    // create a renderer instance.
+    var renderer = PIXI.autoDetectRenderer(w, h);
+ 
+    // add the renderer view element to the DOM
+    document.body.appendChild(renderer.view);
+
+    function resize()
+	{
+		w = window.innerWidth;
+		h = window.innerHeight;
+
+		slideX = w / 2;
+		slideY = h / 2;
+
+		renderer.resize(w, h);
+		spriteContainer.position.x = slideX;
+		spriteContainer.position.y = slideY;
+	}
+
+    // create an empty container
+	var spriteContainer = new PIXI.DisplayObjectContainer();
+	spriteContainer.position.x = Math.floor(slideX);
+	spriteContainer.position.y = Math.floor(slideY);
+	//spriteContainer.scale = new PIXI.Point(0.5,0.5);
+
+	stage.addChild(spriteContainer);
+	var frog;
+	function onAssetsLoaded() {
+
+		for (var i = 0; i < 100; i++) 
+		{
+			var grass = new PIXI.Sprite.fromFrame(BackgroundTiles[backgroundMap[i]].img);
+			grass.position.x = (i%row)*99 - 500;
+			grass.position.y = Math.floor(i/row)*99 - 500;
+			spriteContainer.addChild(grass);
+
+		}
+
+		frog = new PIXI.Sprite.fromFrame('frog.png');
+		frog.position.x = Math.floor(Math.random()*10)*99 - 500;
+		frog.position.y = Math.floor(Math.random()*10)*99 - 500;
+		spriteContainer.addChild(frog);
+
+		requestAnimationFrame(mainLoop);
+
+	}
+
+
+
+	function mainLoop () {
+		requestAnimationFrame(mainLoop);
+
+		if (keyboard.keysCHAR['W']) frog.position.y -= 10;
+		if (keyboard.keysCHAR['S']) frog.position.y += 10;
+		if (keyboard.keysCHAR['D']) frog.position.x += 10;
+		if (keyboard.keysCHAR['A']) frog.position.x -= 10;
+
+		spriteContainer.position.x += (slideX-frog.position.x-50 - spriteContainer.position.x)/20;
+		spriteContainer.position.y += (slideY-frog.position.y-50 - spriteContainer.position.y)/20;
+		renderer.render(stage);
+	}
+
+	resize();
+
+	</script>
+</body>
+</html>
