@@ -16,7 +16,7 @@
 <body>
 	<script>
 
-	var keyboard = new KeyboardJS(false);
+	var keyboard = new KeyboardJS(true);
 
 	function CarSpawner () {
 		this.i = 0;
@@ -40,19 +40,19 @@
 	BackgroundTiles.push( new BackgroundTileProperties({img:'grass.png'}) );
 	BackgroundTiles.push( new BackgroundTileProperties({img:'water.png', fatal:true}) );
 	BackgroundTiles.push( new BackgroundTileProperties({img:'road.png'}) );
-	BackgroundTiles.push( new BackgroundTileProperties({img:'grass.png'}, walkable : false) );
+	BackgroundTiles.push( new BackgroundTileProperties({img:'grass.png', walkable : false}) );
 
 	//El mapa tendría que estar rodeado por tiles non-walkable
-	var backgroundMap = [	3,3,3,3,3,3,3,3,3,3,
-							0,1,0,1,0,0,1,0,1,0,
-							1,1,1,1,1,1,1,1,1,1,
-							1,1,1,1,1,1,1,1,1,1,
-							1,1,1,1,1,1,1,1,1,1,
-							1,1,1,1,1,1,1,1,1,1,
-							2,2,2,2,2,2,2,2,2,2,
-							2,2,2,2,2,2,2,2,2,2,
-							2,2,2,2,2,2,2,2,2,2,
-							0,0,0,0,0,0,0,0,0,0];
+	var backgroundMap = [	[3,3,3,3,3,3,3,3,3,3],
+							[0,1,0,1,0,0,1,0,1,0],
+							[1,1,1,1,1,1,1,1,1,1],
+							[1,1,1,1,1,1,1,1,1,1],
+							[1,1,1,1,1,1,1,1,1,1],
+							[1,1,1,1,1,1,1,1,1,1],
+							[2,2,2,2,2,2,2,2,2,2],
+							[2,2,2,2,2,2,2,2,2,2],
+							[2,2,2,2,2,2,2,2,2,2],
+							[0,0,0,0,0,0,0,0,0,0]	];
 
 	$(window).resize(resize);
 	window.onorientationchange = resize;
@@ -104,35 +104,52 @@
 
 	stage.addChild(spriteContainer);
 	var frog;
+
 	function onAssetsLoaded() {
 
-		for (var i = 0; i < 100; i++) 
+		for (var i = 0; i < backgroundMap.length; i++) 
 		{
-			var grass = new PIXI.Sprite.fromFrame(BackgroundTiles[backgroundMap[i]].img);
-			grass.position.x = (i%row)*99 - 500;
-			grass.position.y = Math.floor(i/row)*99 - 500;
-			spriteContainer.addChild(grass);
-
+			for (var j = 0; j < backgroundMap[i].length; ++j) {
+				var grass = new PIXI.Sprite.fromFrame(BackgroundTiles[backgroundMap[i][j]].img);
+				grass.i = i;
+				grass.j = j;
+				grass.position.x = j*99 - 500;
+				grass.position.y = i*99 - 500;
+				spriteContainer.addChild(grass);
+			}
 		}
 
 		frog = new PIXI.Sprite.fromFrame('frog.png');
-		frog.position.x = Math.floor(Math.random()*10)*99 - 500;
-		frog.position.y = Math.floor(Math.random()*10)*99 - 500;
+		frog.i = Math.floor(Math.random()*backgroundMap.length);
+		frog.j = Math.floor(Math.random()*backgroundMap[0].length)
+		frog.position.x = frog.j*99 - 500;
+		frog.position.y = frog.i*99 - 500;
 		spriteContainer.addChild(frog);
 
 		requestAnimationFrame(mainLoop);
 
 	}
 
-
+	var oldKeysCHAR = keyboard.keysCHAR;
 
 	function mainLoop () {
 		requestAnimationFrame(mainLoop);
 
-		if (keyboard.keysCHAR['W']) frog.position.y -= 10;
-		if (keyboard.keysCHAR['S']) frog.position.y += 10;
-		if (keyboard.keysCHAR['D']) frog.position.x += 10;
-		if (keyboard.keysCHAR['A']) frog.position.x -= 10;
+		if (keyboard.keysCHAR['W'] && !oldKeysCHAR['W']) {
+			console.log('hi');
+			frog.i -= 1;
+		}
+		if (keyboard.keysCHAR['S'] && !oldKeysCHAR['S']) frog.i += 1;
+		if (keyboard.keysCHAR['D'] && !oldKeysCHAR['D']) frog.j += 1;
+		if (keyboard.keysCHAR['A'] && !oldKeysCHAR['A']) frog.j -= 1;
+
+		oldKeysCHAR = {};
+		for (var key in keyboard.keysCHAR) {
+			oldKeysCHAR[key] = keyboard.keysCHAR[key];
+		}
+
+		frog.position.x += (frog.j*99 - 500 - frog.position.x)/5;
+		frog.position.y += (frog.i*99 - 500 - frog.position.y)/5;
 
 		spriteContainer.position.x += (slideX-frog.position.x-50 - spriteContainer.position.x)/20;
 		spriteContainer.position.y += (slideY-frog.position.y-50 - spriteContainer.position.y)/20;
