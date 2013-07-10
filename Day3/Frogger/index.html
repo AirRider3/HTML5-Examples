@@ -135,10 +135,7 @@
 	function mainLoop () {
 		requestAnimationFrame(mainLoop);
 
-		if (keyboard.keysCHAR['W'] && !oldKeysCHAR['W']) {
-			console.log('hi');
-			frog.i -= 1;
-		}
+		if (keyboard.keysCHAR['W'] && !oldKeysCHAR['W']) frog.i -= 1;
 		if (keyboard.keysCHAR['S'] && !oldKeysCHAR['S']) frog.i += 1;
 		if (keyboard.keysCHAR['D'] && !oldKeysCHAR['D']) frog.j += 1;
 		if (keyboard.keysCHAR['A'] && !oldKeysCHAR['A']) frog.j -= 1;
@@ -147,6 +144,9 @@
 		for (var key in keyboard.keysCHAR) {
 			oldKeysCHAR[key] = keyboard.keysCHAR[key];
 		}
+
+		//Comprobar si la casilla movida es válida,
+		//fatal, walkable, destionation, ...
 
 		frog.position.x += (frog.j*99 - 500 - frog.position.x)/5;
 		frog.position.y += (frog.i*99 - 500 - frog.position.y)/5;
