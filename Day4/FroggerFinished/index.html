@@ -321,7 +321,10 @@
 					this.j = oldPosition.j;
 				}
 			} else if (this.i != oldPosition.i || this.j != oldPosition.j) {
-				if (tile.img == 'water.png'){
+				if (this.hitTestOtherPlayer()) {
+					this.i = oldPosition.i;
+					this.j = oldPosition.j;
+				} else if (tile.img == 'water.png'){
 					console.log("i'm on a boat");
 					var lily = this.hitTestLilys();
 					if (lily) {
