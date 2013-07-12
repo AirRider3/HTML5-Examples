@@ -1,0 +1,520 @@
+<html>
+<head>
+	<title>Example</title>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+	<script>window.jQuery || document.write('<script src="js/jquery-1.9.1.min.js"><\/script>');</script>
+	<script src="js/pixi.js"></script>
+	<script src="js/Keyboard.js"></script>
+	<script src="socket.io.min.js"></script>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			background-color: #fafafa;
+		}
+	</style>
+</head>
+<body>
+	<script>
+
+	var keyboard = new KeyboardJS(false);
+
+	function BackgroundTileProperties (props) {
+		for (var prop in props) this[prop] = props[prop];
+	}
+	BackgroundTileProperties.prototype.fatal = false;
+	BackgroundTileProperties.prototype.walkable = true;
+
+	var BackgroundTiles = [];
+	BackgroundTiles.push( new BackgroundTileProperties({img:'grass.png'}) );
+	BackgroundTiles.push( new BackgroundTileProperties({img:'water.png', fatal:true}) );
+	BackgroundTiles.push( new BackgroundTileProperties({img:'road.png'}) );
+	BackgroundTiles.push( new BackgroundTileProperties({img:'grass.png', walkable : false}) );
+
+	//El mapa tendría que estar rodeado por tiles non-walkable
+	var backgroundMap = [	[3,3,3,3,3,3,3,3,3,3,3,3],
+							[3,3,1,3,1,3,3,1,3,1,3,3],
+							[3,1,1,1,1,1,1,1,1,1,1,3],
+							[3,1,1,1,1,1,1,1,1,1,1,3],
+							[3,1,1,1,1,1,1,1,1,1,1,3],
+							[3,1,1,1,1,1,1,1,1,1,1,3],
+							[3,2,2,2,2,2,2,2,2,2,2,3],
+							[3,2,2,2,2,2,2,2,2,2,2,3],
+							[3,2,2,2,2,2,2,2,2,2,2,3],
+							[3,0,0,0,0,0,0,0,0,0,0,3],
+							[3,3,3,3,3,3,3,3,3,3,3,3]	];
+
+	var spawnRow = backgroundMap.length-2;
+
+	$(window).resize(resize);
+	window.onorientationchange = resize;
+
+   	var w = 920;
+   	var h = 640;
+   	var slideX = w/2;
+   	var slideY = h/2;
+
+	// create an array of assets to load
+	var assetsToLoader = [ "textures.json"];
+
+	// create a new loader
+	loader = new PIXI.AssetLoader(assetsToLoader);
+
+	// use callback
+	loader.onComplete = onAssetsLoaded;
+
+	//begin load
+	loader.load();
+
+	// create an new instance of a pixi stage
+    var stage = new PIXI.Stage(0xB4FF78);
+ 
+    // create a renderer instance.
+    var renderer = PIXI.autoDetectRenderer(w, h);
+ 
+    // add the renderer view element to the DOM
+    document.body.appendChild(renderer.view);
+
+    function resize()
+	{
+		w = window.innerWidth;
+		h = window.innerHeight;
+
+		slideX = w / 2;
+		slideY = h / 2;
+
+		renderer.resize(w, h);
+		spriteContainer.position.x = slideX;
+		spriteContainer.position.y = slideY;
+	}
+
+    // create an empty container
+	var spriteContainer = new PIXI.DisplayObjectContainer();
+	spriteContainer.position.x = Math.floor(slideX);
+	spriteContainer.position.y = Math.floor(slideY);
+	spriteContainer.scale = new PIXI.Point(0.5,0.5);
+
+	stage.addChild(spriteContainer);
+	var frog;
+
+	function hitTest (obj1, obj2) {
+		return (obj1.i == obj2.i && obj1.j == obj2.j);
+	}
+
+	function posForIndex (i,j) {
+		return {x:j*99-500, y:i*99-500};
+	}
+
+	function Log (spawner) {
+		this.i = spawner.i;
+		this.j = spawner.j;
+		this.dir = spawner.dir;
+		this.speed = spawner.speed;
+		this.untilTick = 1000/this.speed;
+		this.generateSprite();
+	}
+	Log.prototype = {
+		dim : false,
+		generateSprite : function () {
+			this.sprite = new PIXI.Sprite.fromFrame('log.png');
+			var pos = posForIndex(this.i, this.j);
+			this.sprite.position = pos;
+			spriteContainer.addChild(this.sprite);
+		},
+		logic : function () {
+			this.untilTick -= delta;
+			if (this.untilTick < 0) {
+				//if (!this.dim) this.checkHitTest();
+				this.j += this.dir;
+				this.untilTick += 1000/this.speed;
+				this.dim = (BackgroundTiles[backgroundMap[this.i][this.j]].img != 'water.png');
+			}
+			var pos = posForIndex(this.i, this.j);
+			this.sprite.position.x += (pos.x - this.sprite.position.x)/5;
+			this.sprite.position.y += (pos.y - this.sprite.position.y)/5;
+		},
+		checkHitTest : function () {
+			for (var playerID in players) {
+				var player = players[playerID];
+				if (hitTest(this, player)) {
+					player.j += this.dir;
+					break; //Since there's only a player per cell
+				}
+			}
+		}
+	}
+	function LogSpawner (props) {
+		for (var prop in props) this[prop] = props[prop];
+		this.logs = [];
+		this.untilTick = 1000/this.speed;
+	}
+	LogSpawner.prototype = {
+		i : 0,
+		j : 0,
+		dir : 1,
+		speed : 1,
+		prob : 0.4,
+		spawns : function () {
+			return (Math.random() < this.prob);
+		},
+		spawnLog : function () {
+			var log = new Log (this);
+			this.logs.push(log);
+		},
+		logic : function () {
+			/*
+			this.untilTick -= delta;
+			if (this.untilTick < 0) {
+				if (this.spawns()) this.spawnLog();
+				this.untilTick += 1000/this.speed;
+			}
+			*/
+			for (var i = 0; i < this.logs.length; ++i) this.logs[i].logic();
+			for (var i = this.logs.length-1; i >= 0; --i) {
+				var log = this.logs[i];
+				if (log.dim) {
+					spriteContainer.removeChild(log.sprite);
+					this.logs.splice(i, 1);
+				}
+			}
+		},
+		hitTestPlayer : function (player) {
+			if (player.i != this.i) return false;
+			for (var i = 0; i < this.logs.length; ++i) {
+				if (hitTest(this.logs[i], player)) return this.logs[i];
+			}
+			return false;
+		}
+	}
+
+	function Car (spawner) {
+		this.i = spawner.i;
+		this.j = spawner.j;
+		this.dir = spawner.dir;
+		this.speed = spawner.speed;
+		this.untilTick = 1000/this.speed;
+		this.generateSprite();
+		this.checkHitTest();
+	}
+	Car.prototype = {
+		dim : false,
+		generateSprite : function () {
+			this.sprite = new PIXI.Sprite.fromFrame('car.png');
+			var pos = posForIndex(this.i, this.j);
+			this.sprite.position = pos;
+			spriteContainer.addChild(this.sprite);
+		},
+		logic : function () {
+			this.untilTick -= delta;
+			if (this.untilTick < 0) {
+				this.j += this.dir;
+				this.untilTick += 1000/this.speed;
+				this.dim = (BackgroundTiles[backgroundMap[this.i][this.j]].img != 'road.png');
+				if (!this.dim) this.checkHitTest();
+			}
+			var pos = posForIndex(this.i, this.j);
+			this.sprite.position.x += (pos.x - this.sprite.position.x)/5;
+			this.sprite.position.y += (pos.y - this.sprite.position.y)/5;
+		},
+		checkHitTest : function () {
+			for (var playerID in players) {
+				var player = players[playerID];
+				if (hitTest(this, player)) {
+					player.die();
+					break; //Since there's only a player per cell
+				}
+			}
+		}
+	}
+	
+	function CarSpawner (props) {
+		for (var prop in props) this[prop] = props[prop];
+		this.cars = [];
+		this.untilTick = 1000/this.speed;
+	}
+	CarSpawner.prototype = {
+		i : 0,
+		j : 0,
+		dir : 1,
+		speed : 1,
+		prob : 0.3,
+		spawns : function () {
+			return (Math.random() < this.prob);
+		},
+		spawnCar : function () {
+			var car = new Car (this);
+			this.cars.push(car);
+		},
+		logic : function () {
+			/*
+			this.untilTick -= delta;
+			if (this.untilTick < 0) {
+				if (this.spawns()) this.spawnCar();
+				this.untilTick += 1000/this.speed;
+			}
+			*/
+			for (var i = this.cars.length-1; i >= 0; --i) {
+				var car = this.cars[i];
+				car.logic();
+				if (car.dim) {
+					spriteContainer.removeChild(car.sprite);
+					this.cars.splice(i, 1);
+				}
+			}
+		},
+		hitTestPlayer : function (player) {
+			if (player.i != this.i) return false;
+			for (var i = 0; i < this.cars.length; ++i) {
+				if (hitTest(this.cars[i], player)) return this.cars[i];
+			}
+			return false;
+		}
+	}
+
+	function LilyPad (props) {
+		this.i = props.i;
+		this.j = props.j;
+		this.gotten = false;
+		this.sprite = PIXI.Sprite.fromFrame('finishlily.png');
+		var pos = posForIndex(this.i,this.j);
+		this.sprite.position = pos;
+		spriteContainer.addChild(this.sprite);
+	}
+	LilyPad.prototype.getLily = function () {
+		this.gotten = true;
+		for (var i = 0; i < lilypads.length; ++i) {
+			if (!lilypads[i].gotten) return;
+		}
+		//WIN
+		window.location = 'http://www.youtube.com/watch?v=oHg5SJYRHA0';
+	}
+
+	var players = {};
+	var carSpawners = [];
+	var logSpawners = [];
+	var lilypads = [];
+
+	function Player (id) {
+		this.id = id;
+		this.randomSpawnPosition();
+		this.generateSprite();
+		players[id] = this;
+
+	}
+	Player.prototype = {
+		logic : function () {
+
+			var oldPosition = {i:this.i, j:this.j};
+
+			if (keyboard.keysCHAR['W'] && !oldKeysCHAR['W']) socket.emit('playerMove', {i:-1, j:0});
+			else if (keyboard.keysCHAR['S'] && !oldKeysCHAR['S']) socket.emit('playerMove', {i:1, j:0});
+			else if (keyboard.keysCHAR['D'] && !oldKeysCHAR['D']) socket.emit('playerMove', {i:0, j:1});
+			else if (keyboard.keysCHAR['A'] && !oldKeysCHAR['A']) socket.emit('playerMove', {i:0, j:-1});
+
+			//console.log('Current tile walkable: '+BackgroundTiles[backgroundMap[this.i][this.j]].walkable);
+			var tile = BackgroundTiles[backgroundMap[this.i][this.j]];
+			if (!tile.walkable) {
+				console.log('hit non-walkable tile');
+				if(this.j == oldPosition.j) {
+					//Got dragged by a log
+					this.die();
+				} else {
+					this.i = oldPosition.i;
+					this.j = oldPosition.j;
+				}
+			} else if (this.i != oldPosition.i || this.j != oldPosition.j) {
+				/*
+				if (this.hitTestOtherPlayer()) {
+					this.i = oldPosition.i;
+					this.j = oldPosition.j;
+				} else if (tile.img == 'water.png'){
+					console.log("i'm on a boat");
+					var lily = this.hitTestLilys();
+					if (lily) {
+						console.log('hit test lily, gotten:'+lily.gotten);
+						if (lily.gotten) {
+							this.i = oldPosition.i;
+							this.j = oldPosition.j;
+						} else {
+							lily.getLily();
+							this.moveInstantly();
+							this.generateSprite();
+							this.die();
+						}
+					} else if (!this.hitTestLogs()) this.die();
+				} else if (this.hitTestCars()) {
+					this.die();
+				}
+				*/
+			}
+
+			var pos = posForIndex(this.i, this.j);
+			this.sprite.position.x += (pos.x - this.sprite.position.x)/5;
+			this.sprite.position.y += (pos.y - this.sprite.position.y)/5;
+		},
+		randomSpawnPosition : function () {
+			this.j = Math.floor(Math.random()*(backgroundMap[0].length-2))+1;
+			this.i = spawnRow;
+			if (this.hitTestOtherPlayer()) this.randomSpawnPosition();
+		},
+		hitTestOtherPlayer : function () {
+			for (var playerID in players) {
+				if (playerID != this.id) {
+					var player = players[playerID];
+					if (hitTest(this, player)) return player;
+				}
+			}
+			return false;
+		},
+		hitTestCars : function () {
+			for (var i = 0; i < carSpawners.length; ++i) {
+				if (carSpawners[i].hitTestPlayer(this)) return true;
+			}
+			return false;
+		},
+		hitTestLogs : function () {
+			for (var i = 0; i < logSpawners.length; ++i) {
+				if (logSpawners[i].hitTestPlayer(this)) return true;
+			}
+			return false;
+		},
+		hitTestLilys : function () {
+			for (var i = 0; i < lilypads.length; ++i) {
+				if (hitTest(this, lilypads[i])) return lilypads[i];
+			}
+			return false;
+		},
+		generateSprite : function () {
+			this.sprite = new PIXI.Sprite.fromFrame('frog.png');
+			var pos = posForIndex(this.i, this.j);
+			this.sprite.position = pos;
+			spriteContainer.addChild(this.sprite);
+		},
+		die : function () {
+			this.randomSpawnPosition();
+		},
+		moveInstantly : function () {
+			var pos = posForIndex(this.i, this.j);
+			this.sprite.position = pos;
+		}
+	}
+
+	function onAssetsLoaded() {
+
+		for (var i = 0; i < backgroundMap.length; i++) 
+		{
+			for (var j = 0; j < backgroundMap[i].length; ++j) {
+				console.log(i + ' ' + j);
+				var grass = new PIXI.Sprite.fromFrame(BackgroundTiles[backgroundMap[i][j]].img);
+				grass.i = i;
+				grass.j = j;
+				var pos = posForIndex(i, j);
+				grass.position = pos;
+				spriteContainer.addChild(grass);
+			}
+		}
+
+		carSpawners.push(new CarSpawner({i:6,j:1, speed: 3}));
+		carSpawners.push(new CarSpawner({i:7,j:10, dir: -1, speed: 2}));
+		carSpawners.push(new CarSpawner({i:8,j:1, speed: 3}));
+
+		logSpawners.push(new LogSpawner({i:2, j:10, speed: 1, dir:-1}));
+		logSpawners.push(new LogSpawner({i:3, j:1, speed: 1}));
+		logSpawners.push(new LogSpawner({i:4, j:10, speed: 1, dir:-1}));
+		logSpawners.push(new LogSpawner({i:5, j:1, speed: 1}));
+		
+		lilypads.push(new LilyPad({i:1,j:2}));
+		lilypads.push(new LilyPad({i:1,j:4}));
+		lilypads.push(new LilyPad({i:1,j:7}));
+		lilypads.push(new LilyPad({i:1,j:9}));
+		
+		requestAnimationFrame(mainLoop);
+
+		spriteContainer.addChild(new PIXI.Text('Hi!'));
+
+	}
+
+	var oldKeysCHAR = keyboard.keysCHAR;
+
+	var oldDate = +new Date();
+	var delta = 0;
+
+	function mainLoop () {
+
+		requestAnimationFrame(mainLoop);
+
+		var currentDate = +new Date();
+		delta = currentDate - oldDate;
+		oldDate = currentDate;
+		if (delta > 100) delta = 100;
+
+		for (var playerID in players) players[playerID].logic();
+		for (var i = 0; i < carSpawners.length; ++i) {
+			carSpawners[i].logic();
+		}
+		for (var i = 0; i < logSpawners.length; ++i) logSpawners[i].logic();
+
+		oldKeysCHAR = {};
+		for (var key in keyboard.keysCHAR) {
+			oldKeysCHAR[key] = keyboard.keysCHAR[key];
+		}
+		for (var playerID in players) {
+			spriteContainer.addChild(players[playerID].sprite);
+		}
+
+
+		//Comprobar si la casilla movida es válida,
+		//fatal, walkable, destionation, ...
+
+		//frog.position.x += (frog.j*99 - 500 - frog.position.x)/5;
+		//frog.position.y += (frog.i*99 - 500 - frog.position.y)/5;
+		
+
+		//spriteContainer.position.x += (slideX-frog.position.x-50 - spriteContainer.position.x)/20;
+		//spriteContainer.position.y += (slideY-frog.position.y-50 - spriteContainer.position.y)/20;
+
+		renderer.render(stage);
+	}
+
+	resize();
+
+	var socket = io.connect('http://localhost:8000');
+
+	socket.on('playerID', function (playerID) {
+		socket.id = playerID;
+	});
+
+	socket.on('playerUpdate', function (player) {
+		var p = players[player.id];
+		if (!p) {
+			p = new Player (player.id);
+			p.i = player.i;
+			p.j = player.j;
+			p.moveInstantly();
+			players[p.id] = p;
+		} else {
+			p.i = player.i;
+			p.j = player.j;
+		}
+	});
+
+	socket.on('spawnUpdate', function (spawner) {
+		for (var i = 0; i < carSpawners.length; ++i) {
+			var s = carSpawners[i];
+			if (hitTest(spawner, s)) {
+				s.spawnCar();
+				return;
+			}
+		}
+		for (var i = 0; i < logSpawners.length; ++i) {
+			var s = logSpawners[i];
+			if (hitTest(spawner, s)) {
+				s.spawnLog();
+				return;
+			}
+		}
+	});
+
+	</script>
+</body>
+</html>

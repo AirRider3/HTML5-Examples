@@ -5,6 +5,7 @@
 	<script>window.jQuery || document.write('<script src="js/jquery-1.9.1.min.js"><\/script>');</script>
 	<script src="js/pixi.js"></script>
 	<script src="js/Keyboard.js"></script>
+	<script src="socket.io.min.js"></script>
 	<style>
 		body {
 			margin: 0;
@@ -29,8 +30,6 @@
 	BackgroundTiles.push( new BackgroundTileProperties({img:'water.png', fatal:true}) );
 	BackgroundTiles.push( new BackgroundTileProperties({img:'road.png'}) );
 	BackgroundTiles.push( new BackgroundTileProperties({img:'grass.png', walkable : false}) );
-
-
 
 	//El mapa tendría que estar rodeado por tiles non-walkable
 	var backgroundMap = [	[3,3,3,3,3,3,3,3,3,3,3,3],
@@ -475,6 +474,12 @@
 	}
 
 	resize();
+
+	var socket = io.connect('http://localhost:8000');
+
+	socket.on('playerID', function (playerID) {
+		socket.id = playerID;
+	});
 
 	</script>
 </body>
