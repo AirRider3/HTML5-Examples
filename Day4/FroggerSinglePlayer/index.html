@@ -425,7 +425,9 @@
 		lilypads.push(new LilyPad({i:1,j:7}));
 		lilypads.push(new LilyPad({i:1,j:9}));
 		
-		requestAnimationFrame(mainLoop);
+		//requestAnimationFrame(mainLoop);
+
+		setInterval(mainLoop, 1000/60);
 
 		spriteContainer.addChild(new PIXI.Text('Hi!'));
 
@@ -438,7 +440,7 @@
 
 	function mainLoop () {
 
-		requestAnimationFrame(mainLoop);
+		//requestAnimationFrame(mainLoop);
 
 		var currentDate = +new Date();
 		delta = currentDate - oldDate;
